@@ -309,7 +309,7 @@ namespace vcpkg
         static constexpr StringLiteral LIBRARY_LINKAGE = "LibraryLinkage";
     }
 
-#if defined(_WIN32)
+#if 1//defined(_WIN32)
     static ZStringView to_vcvarsall_target(StringView cmake_system_name)
     {
         if (cmake_system_name.empty()) return "";
@@ -358,7 +358,7 @@ namespace vcpkg
     }
 #endif
 
-#if defined(_WIN32)
+#if 1//defined(_WIN32)
     const Environment& EnvCache::get_action_env(const VcpkgPaths& paths, const AbiInfo& abi_info)
     {
         auto build_env_cmd =
@@ -407,6 +407,7 @@ namespace vcpkg
             {
                 msg::println(msgUseEnvVar, msg::env_var = "HTTP(S)_PROXY");
             }
+#if defined(_WIN32)
             else
             {
                 auto ieProxy = get_windows_ie_proxy_server();
@@ -476,6 +477,7 @@ namespace vcpkg
                     }
                 }
             }
+#endif
             return {env};
         });
 
@@ -568,14 +570,20 @@ namespace vcpkg
     {
         if (!pre_build_info.using_vcvars()) return {};
 
-#if !defined(WIN32)
+#if 0//!defined(WIN32)
         // pre_build_info.using_vcvars() should always be false on non-Win32 hosts.
         // If it was true, we should have failed earlier while selecting a Toolset
         (void)toolset;
         Checks::unreachable(VCPKG_LINE_INFO);
 #else
 
+#if defined(_WIN32)
         const char* tonull = " >nul";
+        const char* fromnull = " <nul";
+#else
+        const char* tonull = " >/dev/null";
+        const char* fromnull = " </dev/null";
+#endif
         if (Debug::g_debugging)
         {
             tonull = "";
@@ -584,12 +592,18 @@ namespace vcpkg
         const auto arch = to_vcvarsall_toolchain(pre_build_info.target_architecture, toolset, pre_build_info.triplet);
         const auto target = to_vcvarsall_target(pre_build_info.cmake_system_name);
 
-        return vcpkg::Command{"cmd"}.string_arg("/c").raw_arg(fmt::format(R"("{}" {} {} {} {} 2>&1 <NUL)",
-                                                                          toolset.vcvarsall,
-                                                                          Strings::join(" ", toolset.vcvarsall_options),
-                                                                          arch,
-                                                                          target,
-                                                                          tonull));
+#if defined(_WIN32)
+        return vcpkg::Command{"cmd"}.string_arg("/c")
+#else
+        return vcpkg::Command{"."}
+#endif
+            .raw_arg(fmt::format(R"("{}" {} {} {} {} 2>&1 {})",
+                                toolset.vcvarsall,
+                                Strings::join(" ", toolset.vcvarsall_options),
+                                arch,
+                                target,
+                                tonull,
+                                fromnull));
 #endif
     }
 

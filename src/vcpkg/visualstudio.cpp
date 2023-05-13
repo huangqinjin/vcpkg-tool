@@ -1,4 +1,4 @@
-#if defined(_WIN32)
+#if 1//defined(_WIN32)
 
 #include <vcpkg/base/files.h>
 #include <vcpkg/base/sortedvector.h>
@@ -16,7 +16,7 @@
 
 #include <vcpkg/base/messages.h>
 
-#if defined(_WIN32)
+#if 1//defined(_WIN32)
 
 namespace vcpkg::VisualStudio
 {

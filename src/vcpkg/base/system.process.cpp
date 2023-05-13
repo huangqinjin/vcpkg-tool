@@ -286,22 +286,28 @@ namespace vcpkg
         return *this;
     }
 
-#if defined(_WIN32)
+#if 1//defined(_WIN32)
     Environment get_modified_clean_environment(const std::unordered_map<std::string, std::string>& extra_env,
                                                StringView prepend_to_path)
     {
+#if defined(_WIN32)
         const std::string& system_root_env = get_system_root().value_or_exit(VCPKG_LINE_INFO).native();
         const std::string& system32_env = get_system32().value_or_exit(VCPKG_LINE_INFO).native();
+        char sep = ';';
+#else
+        char sep = ':';
+#endif
         std::string new_path;
         if (!prepend_to_path.empty())
         {
             Strings::append(new_path, prepend_to_path);
-            if (prepend_to_path.back() != ';')
+            if (prepend_to_path.back() != sep)
             {
-                new_path.push_back(';');
+                new_path.push_back(sep);
             }
         }
 
+#if defined(_WIN32)
         Strings::append(new_path,
                         system32_env,
                         ';',
@@ -311,6 +317,14 @@ namespace vcpkg
                         "\\Wbem;",
                         system32_env,
                         "\\WindowsPowerShell\\v1.0\\");
+#else
+        Strings::append(new_path,
+                        "/usr/local/bin",
+                        sep,
+                        "/usr/bin",
+                        sep,
+                        "/bin");
+#endif
 
         std::vector<std::string> env_strings = {
             "ALLUSERSPROFILE",
@@ -400,7 +414,7 @@ namespace vcpkg
                 if (Strings::case_insensitive_ascii_equals(var, "PATH"))
                 {
                     new_path.assign(prepend_to_path.data(), prepend_to_path.size());
-                    if (!new_path.empty()) new_path.push_back(';');
+                    if (!new_path.empty()) new_path.push_back(sep);
                     new_path.append(get_environment_variable("PATH").value_or(""));
                 }
                 else
@@ -423,7 +437,7 @@ namespace vcpkg
 
         if (extra_env.find("PATH") != extra_env.end())
         {
-            new_path.push_back(';');
+            new_path.push_back(sep);
             new_path += extra_env.find("PATH")->second;
         }
         env.add_entry("PATH", new_path);
@@ -795,13 +809,19 @@ namespace vcpkg
     }
 #endif
 
-#if defined(_WIN32)
+#if 1//defined(_WIN32)
     Environment cmd_execute_and_capture_environment(const Command& cmd_line, const Environment& env)
     {
         static StringLiteral magic_string = "cdARN4xjKueKScMy9C6H";
 
+#if defined(_WIN32)
         auto actual_cmd_line = cmd_line;
         actual_cmd_line.raw_arg(Strings::concat(" & echo ", magic_string, " & set"));
+#else
+        auto actual_cmd_line = Command{"sh"}
+            .string_arg("-c")
+            .string_arg(Strings::concat(cmd_line.command_line(), " && echo ", magic_string, R"( && env -0 | sed -b 's/\x0/\r\n/g')"));
+#endif
 
         Debug::print("command line: ", actual_cmd_line.command_line(), "\n");
         auto maybe_rc_output = cmd_execute_and_capture_output(actual_cmd_line, default_working_directory, env);
@@ -913,7 +933,7 @@ namespace vcpkg
 
         if (!env.get().empty())
         {
-            real_command_line_builder.raw_arg(env.get());
+            real_command_line_builder.raw_arg("env -i").raw_arg(env.get());
         }
 
         real_command_line_builder.raw_arg(cmd_line.command_line());
@@ -982,13 +1002,14 @@ namespace vcpkg
         std::string actual_cmd_line;
         if (wd.working_directory.empty())
         {
-            actual_cmd_line = fmt::format(R"({} {} 2>&1)", env.get(), cmd_line.command_line());
+            actual_cmd_line = fmt::format(R"({} {} {} 2>&1)", env.get().empty() ? "" : "env -i", env.get(), cmd_line.command_line());
         }
         else
         {
             actual_cmd_line = Command("cd")
                                   .string_arg(wd.working_directory)
                                   .raw_arg("&&")
+                                  .raw_arg(env.get().empty() ? "" : "env -i")
                                   .raw_arg(env.get())
                                   .raw_arg(cmd_line.command_line())
                                   .raw_arg("2>&1")

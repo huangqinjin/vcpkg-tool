@@ -1300,7 +1300,7 @@ namespace vcpkg
         return registry_set;
     }
 
-#if defined(_WIN32)
+#if 1//defined(_WIN32)
     static const ToolsetsInformation& get_all_toolsets(VcpkgPathsImpl& impl, const Filesystem& fs)
     {
         return impl.toolsets.get_lazy(
@@ -1333,7 +1333,7 @@ namespace vcpkg
             return external_toolset;
         }
 
-#if !defined(WIN32)
+#if 0//!defined(WIN32)
         Checks::msg_exit_with_error(VCPKG_LINE_INFO, msgErrorVcvarsUnsupported, msg::triplet = prebuildinfo.triplet);
 #else
         const auto& toolsets_info = get_all_toolsets(*m_pimpl, get_filesystem());

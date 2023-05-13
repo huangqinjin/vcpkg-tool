@@ -13,7 +13,7 @@ namespace vcpkg
     {
         std::vector<Toolset> toolsets;
 
-#if defined(_WIN32)
+#if 1//defined(_WIN32)
         std::vector<Path> paths_examined;
         std::vector<Toolset> excluded_toolsets;
         LocalizedString get_localized_debug_info() const;
@@ -21,7 +21,7 @@ namespace vcpkg
     };
 }
 
-#if defined(_WIN32)
+#if 1//defined(_WIN32)
 
 namespace vcpkg::VisualStudio
 {

@@ -307,7 +307,7 @@ namespace vcpkg
 
         const TripletMapEntry& get_triplet_cache(const Filesystem& fs, const Path& p) const;
 
-#if defined(_WIN32)
+#if 1//defined(_WIN32)
         struct EnvMapEntry
         {
             std::unordered_map<std::string, std::string> env_map;
