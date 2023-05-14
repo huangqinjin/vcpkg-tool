@@ -1154,7 +1154,7 @@ namespace vcpkg
 
             auto hash =
                 vcpkg::Hash::get_file_hash(fs, abs_port_file, Hash::Algorithm::Sha256).value_or_exit(VCPKG_LINE_INFO);
-            abi_tag_entries.emplace_back(port_file, hash);
+            abi_tag_entries.emplace_back(port_file.generic_u8string(), hash);
             files.push_back(port_file);
             hashes.push_back(std::move(hash));
 
