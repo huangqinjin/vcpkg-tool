@@ -1123,7 +1123,7 @@ namespace vcpkg
 
         const auto& abi_info = action.abi_info.value_or_exit(VCPKG_LINE_INFO);
         const auto& triplet_abi = paths.get_triplet_info(abi_info);
-        abi_tag_entries.emplace_back("triplet", triplet.canonical_name());
+        //abi_tag_entries.emplace_back("triplet", triplet.canonical_name());
         abi_tag_entries.emplace_back("triplet_abi", triplet_abi);
         abi_entries_from_abi_info(abi_info, abi_tag_entries);
 
@@ -1166,10 +1166,10 @@ namespace vcpkg
             }
         }
 
-        abi_tag_entries.emplace_back("cmake", paths.get_tool_version(Tools::CMAKE, stdout_sink));
+        //abi_tag_entries.emplace_back("cmake", paths.get_tool_version(Tools::CMAKE, stdout_sink));
 
         // This #ifdef is mirrored in tools.cpp's PowershellProvider
-#if defined(_WIN32)
+#if 0//defined(_WIN32)
         abi_tag_entries.emplace_back("powershell", paths.get_tool_version("powershell-core", stdout_sink));
 #endif
 
