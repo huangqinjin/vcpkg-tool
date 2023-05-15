@@ -1252,12 +1252,43 @@ namespace vcpkg
             auto& action = *it;
             if (action.abi_info.has_value()) continue;
 
+            action.abi_info = AbiInfo();
+            auto& abi_info = action.abi_info.value_or_exit(VCPKG_LINE_INFO);
+
+            abi_info.pre_build_info = std::make_unique<PreBuildInfo>(
+                paths, action.spec.triplet(), var_provider.get_tag_vars(action.spec).value_or_exit(VCPKG_LINE_INFO));
+            abi_info.toolset = paths.get_toolset(*abi_info.pre_build_info);
+
+            std::set<std::string> host_dependencies;
+            if (!paths.get_feature_flags().compiler_tracking || abi_info.pre_build_info->disable_compiler_tracking)
+            {
+                auto& scf = *action.source_control_file_and_location.value_or_exit(VCPKG_LINE_INFO).source_control_file;
+                for (const auto& f : action.feature_list)
+                {
+                    if (auto deps_ptr = scf.find_dependencies_for_feature(f).get())
+                    {
+                        for (const auto& d : *deps_ptr)
+                        {
+                            if (d.host) host_dependencies.insert(d.name);
+                        }
+                    }
+                }
+            }
+
             std::vector<AbiEntry> dependency_abis;
             if (!Util::Enum::to_bool(action.build_options.only_downloads))
             {
+                // Some packages may depend on self on host, e.g. python3 and protobuf.
+                // Manually add the abi entry when building such packages natively.
+                if (action.host_triplet == action.spec.triplet() && host_dependencies.count(action.spec.name()) > 0)
+                    dependency_abis.emplace_back(action.spec.name(), "0");
+
                 for (auto&& pspec : action.package_dependencies)
                 {
                     if (pspec == action.spec) continue;
+
+                    const bool disable_host_tracking = action.host_triplet == pspec.triplet() &&
+                                                       host_dependencies.count(pspec.name()) > 0;
 
                     auto pred = [&](const InstallPlanAction& ipa) { return ipa.spec == pspec; };
                     auto it2 = std::find_if(action_plan.install_actions.begin(), it, pred);
@@ -1272,21 +1303,14 @@ namespace vcpkg
                                 fmt::format("Failed to find dependency abi for {} -> {}", action.spec, pspec));
                         }
 
-                        dependency_abis.emplace_back(pspec.name(), status_it->get()->package.abi);
+                        dependency_abis.emplace_back(pspec.name(), disable_host_tracking ? "0" : status_it->get()->package.abi);
                     }
                     else
                     {
-                        dependency_abis.emplace_back(pspec.name(), it2->public_abi());
+                        dependency_abis.emplace_back(pspec.name(), disable_host_tracking ? "0" : it2->public_abi());
                     }
                 }
             }
-
-            action.abi_info = AbiInfo();
-            auto& abi_info = action.abi_info.value_or_exit(VCPKG_LINE_INFO);
-
-            abi_info.pre_build_info = std::make_unique<PreBuildInfo>(
-                paths, action.spec.triplet(), var_provider.get_tag_vars(action.spec).value_or_exit(VCPKG_LINE_INFO));
-            abi_info.toolset = paths.get_toolset(*abi_info.pre_build_info);
 
             auto maybe_abi_tag_and_file = compute_abi_tag(paths, action, dependency_abis);
             if (auto p = maybe_abi_tag_and_file.get())
