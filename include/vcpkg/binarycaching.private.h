@@ -36,7 +36,7 @@ namespace vcpkg
                                         StringView abi_tag,
                                         const std::string& prefix)
     {
-        return {Strings::concat(prefix, spec.dir()), format_version_for_nugetref(raw_version, abi_tag)};
+        return {Strings::concat(prefix, spec.name()), format_version_for_nugetref(raw_version, abi_tag)};
     }
     inline NugetReference make_nugetref(const BinaryPackageInformation& info, const std::string& prefix)
     {
