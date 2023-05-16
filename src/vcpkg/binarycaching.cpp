@@ -2723,9 +2723,9 @@ std::string vcpkg::generate_nuspec(const Path& package_dir,
 
     xml.simple_tag("authors", "vcpkg").line_break();
     xml.simple_tag("description", description).line_break();
-    xml.open_tag("packageTypes");
-    xml.start_complex_open_tag("packageType").text_attr("name", "vcpkg").finish_self_closing_complex_tag();
-    xml.close_tag("packageTypes").line_break();
+    // xml.open_tag("packageTypes");
+    // xml.start_complex_open_tag("packageType").text_attr("name", "vcpkg").finish_self_closing_complex_tag();
+    // xml.close_tag("packageTypes").line_break();
     if (!rinfo.repo.empty())
     {
         xml.start_complex_open_tag("repository").text_attr("type", "git").text_attr("url", rinfo.repo);
