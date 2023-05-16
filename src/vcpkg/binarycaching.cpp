@@ -741,10 +741,11 @@ namespace
                     .string_arg(paths.packages())
                     .string_arg("-Source")
                     .string_arg(Strings::join(";", m_read_sources))
-                    .string_arg("-ExcludeVersion")
+                    //.string_arg("-ExcludeVersion")
                     .string_arg("-PreRelease")
                     .string_arg("-PackageSaveMode")
-                    .string_arg("nupkg")
+                    //.string_arg("nupkg")
+                    .string_arg("nuspec")
                     .string_arg("-Verbosity")
                     .string_arg("detailed")
                     .string_arg("-ForceEnglishOutput");
@@ -774,10 +775,11 @@ namespace
                     .string_arg(paths.packages())
                     .string_arg("-ConfigFile")
                     .string_arg(cfg)
-                    .string_arg("-ExcludeVersion")
+                    //.string_arg("-ExcludeVersion")
                     .string_arg("-PreRelease")
                     .string_arg("-PackageSaveMode")
-                    .string_arg("nupkg")
+                    //.string_arg("nupkg")
+                    .string_arg("nuspec")
                     .string_arg("-Verbosity")
                     .string_arg("detailed")
                     .string_arg("-ForceEnglishOutput");
@@ -806,15 +808,16 @@ namespace
                 Util::erase_remove_if(attempts, [&](const NuGetPrefetchAttempt& nuget_ref) -> bool {
                     // note that we would like the nupkg downloaded to buildtrees, but nuget.exe downloads it to the
                     // output directory
-                    const auto nupkg_path =
-                        paths.packages() / nuget_ref.reference.id / nuget_ref.reference.id + ".nupkg";
-                    if (fs.exists(nupkg_path, IgnoreErrors{}))
+                    const auto nupkg_path = 
+                        //paths.packages() / nuget_ref.reference.id / nuget_ref.reference.id + ".nupkg";
+                        paths.packages() / Strings::concat(nuget_ref.reference.id, '.', nuget_ref.reference.version);
+                    if (fs.exists(nupkg_path / nuget_ref.reference.id + ".nuspec", IgnoreErrors{}))
                     {
-                        fs.remove(nupkg_path, VCPKG_LINE_INFO);
+                        fs.remove(nupkg_path / nuget_ref.reference.id + ".nuspec", VCPKG_LINE_INFO);
                         const auto nuget_dir = nuget_ref.spec.dir();
                         if (nuget_dir != nuget_ref.reference.id)
                         {
-                            const auto path_from = paths.packages() / nuget_ref.reference.id;
+                            const auto path_from = nupkg_path; //paths.packages() / nuget_ref.reference.id;
                             const auto path_to = paths.packages() / nuget_dir;
                             fs.rename(path_from, path_to, VCPKG_LINE_INFO);
                         }
