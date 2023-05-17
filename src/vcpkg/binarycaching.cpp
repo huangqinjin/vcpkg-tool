@@ -883,6 +883,7 @@ namespace
                 return 0;
             }
             int count_stored = 0;
+            int count_failed = 0;
             auto nupkg_path = paths.buildtrees() / nuget_ref.nupkg_filename();
             for (auto&& write_src : m_write_sources)
             {
@@ -907,6 +908,7 @@ namespace
                     msgUploadingBinariesToVendor, msg::spec = spec, msg::vendor = "NuGet", msg::path = write_src);
                 if (!run_nuget_commandline(cmd, msg_sink))
                 {
+                    count_failed++;
                     msg_sink.println(
                         Color::error, msgPushingVendorFailed, msg::vendor = "NuGet", msg::path = write_src);
                 }
@@ -940,6 +942,7 @@ namespace
                                  msg::path = write_cfg);
                 if (!run_nuget_commandline(cmd, msg_sink))
                 {
+                    count_failed++;
                     msg_sink.println(
                         Color::error, msgPushingVendorFailed, msg::vendor = "NuGet", msg::path = write_cfg);
                 }
@@ -949,7 +952,7 @@ namespace
                 }
             }
 
-            fs.remove(nupkg_path, IgnoreErrors{});
+            if (count_failed == 0) fs.remove(nupkg_path, IgnoreErrors{});
             return count_stored;
         }
 
