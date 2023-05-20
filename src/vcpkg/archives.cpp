@@ -345,7 +345,7 @@ namespace vcpkg
     std::vector<ExpectedL<Unit>> decompress_in_parallel(View<Command> jobs)
     {
         auto results =
-            cmd_execute_and_capture_output_parallel(jobs, default_working_directory, get_clean_environment());
+            cmd_execute_and_capture_output_parallel(jobs, default_working_directory);
 
         std::vector<ExpectedL<Unit>> filtered_results;
         filtered_results.reserve(jobs.size());
