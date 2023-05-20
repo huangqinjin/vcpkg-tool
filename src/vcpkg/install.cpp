@@ -329,7 +329,7 @@ namespace vcpkg
             auto restore = binary_cache.try_restore(action);
             if (restore == RestoreResult::restored)
             {
-                auto maybe_bcf = Paragraphs::try_load_cached_package(fs, paths.package_dir(action.spec), action.spec);
+                auto maybe_bcf = Paragraphs::try_load_cached_package(fs, paths.package_dir(action.spec), action.host_triplet, action.spec);
                 bcf = std::make_unique<BinaryControlFile>(std::move(maybe_bcf).value_or_exit(VCPKG_LINE_INFO));
             }
             else if (action.build_options.build_missing == BuildMissing::NO)

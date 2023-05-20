@@ -73,11 +73,15 @@ namespace vcpkg
             parse_qualified_specifier_list(parser.optional_field(Fields::DEPENDS)).value_or_exit(VCPKG_LINE_INFO),
             [my_triplet](const ParsedQualifiedSpecifier& dep) {
                 // for compatibility with previous vcpkg versions, we discard all irrelevant information
-                return PackageSpec{
-                    dep.name,
-                    dep.triplet.map([](auto&& s) { return Triplet::from_canonical_name(std::string(s)); })
-                        .value_or(my_triplet),
-                };
+                auto triplet = dep.triplet.value_or(std::string());
+                bool host = !triplet.empty() && triplet[0] == '-';
+                if (host) triplet = triplet.substr(1);
+                return PackageSpec{dep.name + (host ? "-" : "+"), triplet.empty() ? my_triplet : Triplet::from_canonical_name(triplet)};
+                // return PackageSpec{
+                //     dep.name,
+                //     dep.triplet.map([](auto&& s) { return Triplet::from_canonical_name(std::string(s)); })
+                //         .value_or(my_triplet),
+                // };
             });
         if (!this->is_feature())
         {
@@ -98,6 +102,13 @@ namespace vcpkg
         Checks::msg_check_exit(VCPKG_LINE_INFO, multi_arch == "same", msgMultiArch, msg::option = multi_arch);
 
         canonicalize();
+
+        is_host_dependencies.reserve(dependencies.size());
+        for (auto& d : dependencies)
+        {
+            is_host_dependencies.push_back(d.name().back() == '-');
+            d = PackageSpec{ d.name().substr(0, d.name().size() - 1), d.triplet() };
+        }
     }
 
     BinaryParagraph::BinaryParagraph(const SourceParagraph& spgh,
@@ -190,6 +201,7 @@ namespace vcpkg
         if (lhs.feature != rhs.feature) return false;
         if (lhs.default_features != rhs.default_features) return false;
         if (lhs.dependencies != rhs.dependencies) return false;
+        if (lhs.is_host_dependencies != rhs.is_host_dependencies) return false;
         if (lhs.abi != rhs.abi) return false;
 
         return true;
@@ -225,9 +237,13 @@ namespace vcpkg
         serialize_array(name, array, out_str, "\n    ");
     }
 
-    static std::string serialize_deps_list(View<PackageSpec> deps, Triplet target)
+    static std::string serialize_deps_list(View<PackageSpec> deps, Triplet target, const std::vector<bool>& host)
     {
-        return Strings::join(", ", deps, [target](const PackageSpec& pspec) {
+        return Strings::join(", ", deps, [&](const PackageSpec& pspec) {
+            if (host[std::addressof(pspec) - deps.data()])
+            {
+                return pspec.name() + ":-" + (pspec.triplet() == target ? "" : pspec.triplet().to_string());
+            }
             if (pspec.triplet() == target)
             {
                 return pspec.name();
@@ -261,7 +277,7 @@ namespace vcpkg
 
         if (!pgh.dependencies.empty())
         {
-            serialize_string(Fields::DEPENDS, serialize_deps_list(pgh.dependencies, pgh.spec.triplet()), out_str);
+            serialize_string(Fields::DEPENDS, serialize_deps_list(pgh.dependencies, pgh.spec.triplet(), pgh.is_host_dependencies), out_str);
         }
 
         serialize_string(Fields::ARCHITECTURE, pgh.spec.triplet().to_string(), out_str);

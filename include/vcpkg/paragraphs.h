@@ -30,6 +30,7 @@ namespace vcpkg::Paragraphs
 
     ExpectedL<BinaryControlFile> try_load_cached_package(const Filesystem& fs,
                                                          const Path& package_dir,
+                                                         Triplet host_triplet,
                                                          const PackageSpec& spec);
 
     struct LoadResults

@@ -42,6 +42,7 @@ namespace vcpkg
         std::string feature;
         std::vector<std::string> default_features;
         std::vector<PackageSpec> dependencies;
+        std::vector<bool> is_host_dependencies;
         std::string abi;
     };
 

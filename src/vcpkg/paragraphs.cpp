@@ -462,6 +462,7 @@ namespace vcpkg::Paragraphs
 
     ExpectedL<BinaryControlFile> try_load_cached_package(const Filesystem& fs,
                                                          const Path& package_dir,
+                                                         Triplet host_triplet,
                                                          const PackageSpec& spec)
     {
         StatsTimer timer(g_load_ports_stats);
@@ -484,6 +485,14 @@ namespace vcpkg::Paragraphs
                                    msg::expected = spec,
                                    msg::actual = bcf.core_paragraph.spec);
             }
+
+            auto update_host_triplet = [host_triplet](BinaryParagraph& pgh) {
+                for (std::size_t i = 0; i < pgh.dependencies.size(); ++i)
+                    if (pgh.is_host_dependencies[i])
+                        pgh.dependencies[i] = PackageSpec{pgh.dependencies[i].name(), host_triplet};
+            };
+            update_host_triplet(bcf.core_paragraph);
+            for (auto& f : bcf.features) update_host_triplet(f);
 
             return bcf;
         }

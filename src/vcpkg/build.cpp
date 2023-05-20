@@ -621,6 +621,15 @@ namespace vcpkg
             bpgh.version = *p_ver;
         }
 
+        bpgh.is_host_dependencies.reserve(bpgh.dependencies.size());
+        for (const auto& f : bpgh.dependencies)
+        {
+            Optional<bool> host;
+            for (const auto& d : source_paragraph.dependencies)
+                if (f.name() == d.name) host = d.host;
+            bpgh.is_host_dependencies.push_back(host.value_or_exit(VCPKG_LINE_INFO));
+        }
+
         bcf->core_paragraph = std::move(bpgh);
         return bcf;
     }
@@ -1027,6 +1036,16 @@ namespace vcpkg
 
                     bcf->features.emplace_back(
                         *scfl.source_control_file->core_paragraph, *f_pgh, triplet, find_itr->second);
+
+                    auto& bpgh = bcf->features.back();
+                    bpgh.is_host_dependencies.reserve(bpgh.dependencies.size());
+                    for (const auto& f : bpgh.dependencies)
+                    {
+                        Optional<bool> host;
+                        for (const auto& d : f_pgh->dependencies)
+                            if (f.name() == d.name) host = d.host;
+                        bpgh.is_host_dependencies.push_back(host.value_or_exit(VCPKG_LINE_INFO));
+                    }    
                 }
             }
         }
