@@ -20,6 +20,7 @@
 #include <vcpkg/cmakevars.h>
 #include <vcpkg/commands.h>
 #include <vcpkg/commands.version.h>
+#include <vcpkg/configuration.h>
 #include <vcpkg/dependencies.h>
 #include <vcpkg/documentation.h>
 #include <vcpkg/globalstate.h>
@@ -386,6 +387,42 @@ namespace vcpkg
             {
                 auto val = get_environment_variable(var);
                 if (auto p_val = val.get()) env.emplace(var, *p_val);
+            }
+
+            if (const auto conf = paths.get_configuration().config.extra_info.get("$ccache"))
+            {
+                auto candidates = paths.get_filesystem().find_from_PATH("ccache");
+                Checks::check_exit(VCPKG_LINE_INFO, !candidates.empty(), "cannot find ccache in PATH");
+                auto ccache = candidates[0].generic_u8string();
+                env.emplace("CMAKE_C_COMPILER_LAUNCHER", ccache);
+                env.emplace("CMAKE_CXX_COMPILER_LAUNCHER", ccache);
+
+                // https://ccache.dev/manual/latest.html#_configuration_options
+                env.emplace("CCACHE_NAMESPACE", abi_info.pre_build_info->triplet.canonical_name());
+                env.emplace("CCACHE_DIR", (paths.root / ".cache" / "c~").generic_u8string());
+                env.emplace("CCACHE_DEBUGDIR", (paths.root / ".cache" / "d~").generic_u8string());
+                env.emplace("CCACHE_BASEDIR", paths.buildtrees().generic_u8string());
+                env.emplace("CCACHE_COMPILERCHECK", "none");
+                env.emplace("CCACHE_MAXSIZE", "0");
+                env.emplace("CCACHE_HARDLINK", "");
+                env.emplace("CCACHE_NOHASHDIR", "");
+                env.emplace("CCACHE_DEPEND", "");
+                env.emplace("CCACHE_DIRECT", "");
+                env.emplace("CCACHE_CONFIGPATH", "");
+
+                for (const auto& [k, v] : conf->object(VCPKG_LINE_INFO))
+                {
+                    if (Strings::starts_with(k, "CCACHE_")) switch (v.kind())
+                    {
+                    case Json::ValueKind::Null:
+                        env.erase(k.to_string());
+                        break;
+                    case Json::ValueKind::String:
+                    default:
+                        env[k.to_string()] = v.string(VCPKG_LINE_INFO).to_string();
+                        break;
+                    }
+                }
             }
 
             /*
